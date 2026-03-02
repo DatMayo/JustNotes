@@ -1,0 +1,61 @@
+from pydantic import BaseModel
+from sqlmodel import Field, SQLModel
+import time
+
+
+def get_current_time() -> int:
+    """
+    Get current Unix timestamp.
+    
+    Returns:
+        int: Current Unix timestamp in seconds
+    """
+    return int(time.time())
+
+
+class UserBase(BaseModel):
+    """
+    Base model for user data (without database fields).
+    
+    Attributes:
+        username: Unique username for the user
+        password: User's password (should be hashed when stored)
+    """
+    username: str
+    password: str
+
+
+class User(UserBase, SQLModel, table=True):
+    """
+    Complete user model with database fields.
+    
+    Inherits from UserBase and adds database-specific fields.
+    Represents the users table in the database.
+    
+    Attributes:
+        id: Primary key (auto-generated)
+        createdAt: Unix timestamp when user was created
+        updatedAt: Unix timestamp when user was last updated
+    """
+    id: int | None = Field(default=None, primary_key=True)
+    createdAt: int = Field(default_factory=get_current_time)
+    updatedAt: int = Field(default_factory=get_current_time)
+
+
+class UserResponse(BaseModel):
+    """
+    Response model for user data (excludes password).
+    
+    Used for API responses to include user information
+    without exposing the password hash.
+    
+    Attributes:
+        id: User ID
+        username: User's username
+        createdAt: Creation timestamp
+        updatedAt: Last update timestamp
+    """
+    id: int
+    username: str
+    createdAt: int
+    updatedAt: int
