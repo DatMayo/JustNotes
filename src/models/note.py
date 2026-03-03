@@ -1,6 +1,10 @@
 from pydantic import BaseModel
-from sqlmodel import Field, SQLModel
+from sqlmodel import Field, SQLModel, Relationship
 import time
+from typing import Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .user import User
 
 
 def get_current_time() -> int:
@@ -20,12 +24,10 @@ class NoteBase(BaseModel):
     Attributes:
         title: Title of the note
         text: Content/body of the note
-        createdBy: ID of the user who created the note
         isPublic: Whether the note is publicly accessible
     """
     title: str
     text: str
-    createdBy: int
     isPublic: bool
 
 
@@ -40,24 +42,33 @@ class Note(NoteBase, SQLModel, table=True):
         id: Primary key (auto-generated)
         createdAt: Unix timestamp when note was created
         updatedAt: Unix timestamp when note was last updated
+        owner: Relationship to the User who created this note
     """
     id: int | None = Field(default=None, primary_key=True)
     createdAt: int = Field(default_factory=get_current_time)
     updatedAt: int = Field(default_factory=get_current_time)
+    
+    # Foreign Key to User table
+    owner_id: int = Field(foreign_key="user.id")
+    
+    # Relationship to User model
+    owner: Optional["User"] = Relationship(back_populates="notes")
 
 
 class NoteResponse(NoteBase):
     """
-    Response model for note data (includes database fields).
+    Response model for note data (includes database fields and owner).
     
     Used for API responses to include all note information
-    including timestamps and ID.
+    including timestamps, ID, and owner details.
     
     Attributes:
         id: Note ID
         createdAt: Creation timestamp
         updatedAt: Last update timestamp
+        owner: User who created this note (optional)
     """
     id: int
     createdAt: int
     updatedAt: int
+    owner: Optional[dict] = None

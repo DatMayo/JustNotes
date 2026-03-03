@@ -22,7 +22,7 @@ def get_note_crud(session: Session = Depends(get_db_session)):
     return NoteCRUD(session)
 
 
-@router.get("/notes", tags=["Notes"], response_model=list[Note])
+@router.get("/notes", tags=["Notes"], response_model=list[dict])
 def get_notes(current_user = Depends(get_current_user), crud: NoteCRUD = Depends(get_note_crud)):
     """
     Get all notes for the current authenticated user.
@@ -32,7 +32,7 @@ def get_notes(current_user = Depends(get_current_user), crud: NoteCRUD = Depends
         crud: NoteCRUD instance for database operations
         
     Returns:
-        list[Note]: List of notes created by the current user
+        list[dict]: List of notes created by the current user with owner information
         
     Note:
         Only returns notes that belong to the authenticated user
@@ -40,7 +40,7 @@ def get_notes(current_user = Depends(get_current_user), crud: NoteCRUD = Depends
     return crud.get_user_notes(current_user.id)
 
 
-@router.get("/notes/my", tags=["Notes"], response_model=list[Note])
+@router.get("/notes/my", tags=["Notes"], response_model=list[dict])
 def get_my_notes(current_user = Depends(get_current_user), crud: NoteCRUD = Depends(get_note_crud)):
     """
     Get all notes for the current user (both private and public).
@@ -50,7 +50,7 @@ def get_my_notes(current_user = Depends(get_current_user), crud: NoteCRUD = Depe
         crud: NoteCRUD instance for database operations
         
     Returns:
-        list[Note]: List of all notes created by the current user
+        list[dict]: List of notes created by the current user with owner information
         
     Note:
         Returns both private and public notes created by the user
@@ -58,7 +58,7 @@ def get_my_notes(current_user = Depends(get_current_user), crud: NoteCRUD = Depe
     return crud.get_user_notes(current_user.id)
 
 
-@router.post("/notes/create", tags=["Notes"], response_model=NoteResponse, status_code=201)
+@router.post("/notes/create", tags=["Notes"], response_model=dict, status_code=201)
 def create_notes(item: NoteBase, current_user = Depends(get_current_user), crud: NoteCRUD = Depends(get_note_crud)):
     """
     Create a new note (requires authentication).
@@ -69,17 +69,15 @@ def create_notes(item: NoteBase, current_user = Depends(get_current_user), crud:
         crud: NoteCRUD instance for database operations
         
     Returns:
-        NoteResponse: Created note with ID and timestamps
+        dict: Created note with ID, timestamps, and owner information
         
     Note:
-        The createdBy field is automatically set to the current user's ID
+        The note is automatically assigned to the current user
     """
-    # Set the createdBy to the current user's ID
-    item.createdBy = current_user.id
-    return crud.create_note(item)
+    return crud.create_note(item, current_user.id)
 
 
-@router.get("/notes/public", tags=["Notes"], response_model=list[Note])
+@router.get("/notes/public", tags=["Notes"], response_model=list[dict])
 def get_public_notes(crud: NoteCRUD = Depends(get_note_crud)):
     """
     Get all public notes (no authentication required).
@@ -88,12 +86,12 @@ def get_public_notes(crud: NoteCRUD = Depends(get_note_crud)):
         crud: NoteCRUD instance for database operations
         
     Returns:
-        list[Note]: List of all public notes
+        list[dict]: List of all public notes with owner information
     """
     return crud.get_public_notes()
 
 
-@router.get("/notes/{id}", tags=["Notes"], response_model=NoteResponse)
+@router.get("/notes/{id}", tags=["Notes"], response_model=dict)
 def get_note(id: int, current_user = Depends(get_current_user), crud: NoteCRUD = Depends(get_note_crud)):
     """
     Get a specific note by ID (requires authentication).
@@ -104,7 +102,7 @@ def get_note(id: int, current_user = Depends(get_current_user), crud: NoteCRUD =
         crud: NoteCRUD instance for database operations
         
     Returns:
-        NoteResponse: Note with specified ID
+        dict: Note with specified ID and owner information
         
     Raises:
         HTTPException: 403 if user doesn't own the note and it's not public
@@ -112,12 +110,12 @@ def get_note(id: int, current_user = Depends(get_current_user), crud: NoteCRUD =
     """
     note = crud.get_note_by_id(id)
     # Check if user owns the note or it's public
-    if note.createdBy != current_user.id and not note.isPublic:
+    if note["owner_id"] != current_user.id and not note["isPublic"]:
         raise HTTPException(status_code=403, detail="Not authorized to access this note")
     return note
 
 
-@router.put("/notes/{id}", tags=["Notes"], response_model=NoteResponse)
+@router.put("/notes/{id}", tags=["Notes"], response_model=dict)
 def update_note(id: int, item: NoteBase, current_user = Depends(get_current_user), crud: NoteCRUD = Depends(get_note_crud)):
     """
     Update a specific note by ID (requires authentication and ownership).
@@ -129,19 +127,13 @@ def update_note(id: int, item: NoteBase, current_user = Depends(get_current_user
         crud: NoteCRUD instance for database operations
         
     Returns:
-        NoteResponse: Updated note with new data
+        dict: Updated note with new data and owner information
         
     Raises:
         HTTPException: 403 if user doesn't own the note
         HTTPException: 404 if note is not found (from crud.get_note_by_id)
         
     Note:
-        The createdBy field is automatically set to prevent ownership changes
+        Ownership cannot be transferred through this endpoint
     """
-    note = crud.get_note_by_id(id)
-    # Check if user owns the note
-    if note.createdBy != current_user.id:
-        raise HTTPException(status_code=403, detail="Not authorized to modify this note")
-    # Set the createdBy to the current user's ID to prevent ownership change
-    item.createdBy = current_user.id
-    return crud.update_note(id, item)
+    return crud.update_note(id, item, current_user.id)

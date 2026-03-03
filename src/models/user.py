@@ -1,6 +1,7 @@
 from pydantic import BaseModel
-from sqlmodel import Field, SQLModel
+from sqlmodel import Field, SQLModel, Relationship
 import time
+from typing import List, Optional
 
 
 def get_current_time() -> int:
@@ -36,10 +37,14 @@ class User(UserBase, SQLModel, table=True):
         id: Primary key (auto-generated)
         createdAt: Unix timestamp when user was created
         updatedAt: Unix timestamp when user was last updated
+        notes: Relationship to all notes created by this user
     """
     id: int | None = Field(default=None, primary_key=True)
     createdAt: int = Field(default_factory=get_current_time)
     updatedAt: int = Field(default_factory=get_current_time)
+    
+    # Relationship to Note model
+    notes: List["Note"] = Relationship(back_populates="owner")
 
 
 class UserResponse(BaseModel):
