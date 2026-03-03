@@ -5,10 +5,10 @@ from sqlmodel import Session
 from pydantic import BaseModel
 from ..database.connection import get_db_session
 from ..database.crud import UserCRUD
-from ..utils.auth import verify_password
+from ..utils.auth import verify_password, hash_password
 from ..utils.jwt import create_access_token
 from ..config import settings
-from ..models.user import UserResponse
+from ..models.user import UserResponse, UserBase
 
 # Router for authentication-related endpoints
 router = APIRouter()
@@ -97,6 +97,27 @@ def get_current_user(token: str = Depends(oauth2_scheme), crud: UserCRUD = Depen
         )
     
     return user
+
+
+@router.post("/auth/register", tags=["Auth"], response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+async def register(user: UserBase, crud: UserCRUD = Depends(get_user_crud)):
+    """
+    Register a new user account.
+    
+    Args:
+        user: User registration data (username and password)
+        crud: UserCRUD instance for database operations
+        
+    Returns:
+        UserResponse: Created user information (without password)
+        
+    Raises:
+        HTTPException: 400 if username already exists
+    """
+    # Hash password before storing
+    hashed_password = hash_password(user.password)
+    user_data = UserBase(username=user.username, password=hashed_password)
+    return crud.create_user(user_data)
 
 
 @router.post("/auth/login", tags=["Auth"], response_model=Token)

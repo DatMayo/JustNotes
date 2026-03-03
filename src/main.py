@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from .database import create_db_and_tables
 from .api import notes_router, users_router, health_router, auth_router
 from .config import settings
@@ -20,6 +21,15 @@ app = FastAPI(
         "name": "MIT License",
         "url": "https://github.com/DatMayo/JustNotes/blob/main/LICENSE"
     }
+)
+
+# Configure CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # In production, replace with specific origins
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Create database tables on application startup
