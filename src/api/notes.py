@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session
 
+import requests
+
 from ..models.user import UserResponse
 from ..database.connection import get_db_session
 from ..database.crud import NoteCRUD
@@ -42,24 +44,6 @@ def get_notes(current_user = Depends(get_current_user), crud: NoteCRUD = Depends
     return crud.get_user_notes(current_user.id)
 
 
-@router.get("/notes/my", tags=["Notes"], response_model=list[dict])
-def get_my_notes(current_user = Depends(get_current_user), crud: NoteCRUD = Depends(get_note_crud)):
-    """
-    Get all notes for the current user (both private and public).
-    
-    Args:
-        current_user: Authenticated user from JWT token
-        crud: NoteCRUD instance for database operations
-        
-    Returns:
-        list[dict]: List of notes created by the current user with owner information
-        
-    Note:
-        Returns both private and public notes created by the user
-    """
-    return crud.get_user_notes(current_user.id)
-
-
 @router.post("/notes/create", tags=["Notes"], response_model=dict, status_code=201)
 def create_notes(item: NoteBase, current_user = Depends(get_current_user), crud: NoteCRUD = Depends(get_note_crud)):
     """
@@ -93,6 +77,69 @@ def get_public_notes(crud: NoteCRUD = Depends(get_note_crud)):
     return crud.get_public_notes()
 
 
+def _check_note_access(note, current_user):
+    """
+    Helper function to check if user has access to a note.
+    
+    Args:
+        note: Note object to check access for
+        current_user: Current authenticated user
+        
+    Raises:
+        HTTPException: 403 if user doesn't have access
+    """
+    if note.owner_id != current_user.id and not note.isPublic:
+        raise HTTPException(status_code=403, detail="Not authorized to access this note")
+
+
+def _call_llm_api(model: str, prompt: str) -> dict:
+    """
+    Helper function to call the local LLM API.
+    
+    Args:
+        model: Model name to use
+        prompt: System query/prompt for the model
+        
+    Returns:
+        dict: JSON response from the LLM API
+    """
+    response = requests.post(
+        "http://localhost:1234/api/v1/chat",
+        headers={"Content-Type": "application/json"},
+        json={"model": model, "input": prompt}
+    )
+    return response.json()
+
+
+@router.get('/notes/{id}/summarize', tags=["Notes"])
+def get_notes_summarize(id: int, current_user = Depends(get_current_user), crud: NoteCRUD = Depends(get_note_crud)):
+    note, user = crud.get_note_by_id(id)
+    _check_note_access(note, current_user)
+
+    system_query = f'''You are an intelligent summarization assistant for a notes app.
+Summarize the following article accurately and concisely, using the same language in which the article is written.
+Focus on key ideas, relevant facts, and overall meaning — avoid unnecessary details or repetition.
+Title: {note.title}
+Article: {note.text}
+Return only the summary text without commentary or formatting instructions.'''
+
+    return _call_llm_api("andycurrent/llama-3-8b-lexi-uncensored@q4_k_m", system_query)
+
+@router.get('/notes/{id}/extend', tags=["Notes"])
+def get_notes_extend(id: int, current_user = Depends(get_current_user), crud: NoteCRUD = Depends(get_note_crud)):
+    note, user = crud.get_note_by_id(id)
+    _check_note_access(note, current_user)
+
+    system_query = f'''You are an intelligent writing assistant for a notes app.
+Extend the following article naturally in the same language it is written in.
+Keep the original tone, style, and context consistent.
+Add depth by expanding on key ideas, providing additional insights, examples, or relevant background information — but do not repeat what's already written.
+Title: {note.title}
+Article: {note.text}
+Return only the extended version of the article.'''
+
+    return _call_llm_api("andycurrent/llama-3-8b-lexi-uncensored@q4_k_m", system_query)
+
 @router.get("/notes/{id}", tags=["Notes"], response_model=NoteResponse)
 def get_note(id: int, current_user = Depends(get_current_user), crud: NoteCRUD = Depends(get_note_crud)):
     """
@@ -111,15 +158,14 @@ def get_note(id: int, current_user = Depends(get_current_user), crud: NoteCRUD =
         HTTPException: 404 if note is not found (from crud.get_note_by_id)
     """
     note, user = crud.get_note_by_id(id)
+    _check_note_access(note, current_user)
+    
     owner: UserResponse = UserResponse(
         id=user.id,
         username=user.username,
         createdAt=user.createdAt,
         updatedAt=user.updatedAt
     )
-    # Check if user owns the note or it's public
-    if note.owner_id != current_user.id and not note.isPublic:
-        raise HTTPException(status_code=403, detail="Not authorized to access this note")
         
     response = NoteResponse(
         id=note.id,
