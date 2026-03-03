@@ -1,4 +1,5 @@
 from pydantic_settings import BaseSettings
+from typing import Optional
 
 
 class Settings(BaseSettings):
@@ -6,6 +7,7 @@ class Settings(BaseSettings):
     Application configuration settings.
     
     Loads configuration from environment variables and .env file.
+    Uses JUSTNOTES_ prefix for environment variables.
     Provides default values for all settings.
     
     Attributes:
@@ -16,14 +18,33 @@ class Settings(BaseSettings):
         secret_key: Secret key for JWT token signing
         algorithm: Algorithm used for JWT token signing
         access_token_expire_minutes: Minutes until JWT token expires
+        environment: Current environment (development/production)
+        debug: Enable debug mode
+        host: Server host for Docker
+        port: Server port for Docker
+        reload: Enable auto-reload for development
     """
+    # Database Configuration
     database_url: str = "sqlite:///db.sqlite"
+    
+    # Application Configuration
     app_name: str = "JustNotes"
     app_version: str = "0.0.1"
     app_description: str = "JustNotes is a simple note-taking app"
+    
+    # JWT Configuration
     secret_key: str = "your-secret-key-change-in-production"
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
+    
+    # Environment Configuration
+    environment: str = "development"
+    debug: bool = True
+    
+    # Server Configuration (for Docker)
+    host: str = "0.0.0.0"
+    port: int = 8000
+    reload: bool = False
     
     class Config:
         """
@@ -31,8 +52,14 @@ class Settings(BaseSettings):
         
         Attributes:
             env_file: Path to environment file for loading variables
+            env_file_encoding: File encoding for environment file
+            case_sensitive: Whether environment variables are case sensitive
+            env_prefix: Prefix for environment variables
         """
         env_file = ".env"
+        env_file_encoding = "utf-8"
+        case_sensitive = False
+        env_prefix = "JUSTNOTES_"
 
 
 # Global settings instance

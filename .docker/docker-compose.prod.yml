@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  justnotes-prod:
+    build: .
+    ports:
+      - "${JUSTNOTES_PORT:-8000}:8000"
+    environment:
+      - JUSTNOTES_DATABASE_URL=sqlite:///app/data/db.sqlite
+      - JUSTNOTES_SECRET_KEY=${JUSTNOTES_SECRET_KEY}
+      - JUSTNOTES_ALGORITHM=HS256
+      - JUSTNOTES_ACCESS_TOKEN_EXPIRE_MINUTES=30
+      - JUSTNOTES_APP_NAME=JustNotes
+      - JUSTNOTES_APP_VERSION=0.0.1
+      - JUSTNOTES_APP_DESCRIPTION=JustNotes is a simple note-taking app
+      - JUSTNOTES_ENVIRONMENT=production
+      - JUSTNOTES_DEBUG=false
+      - JUSTNOTES_HOST=0.0.0.0
+      - JUSTNOTES_PORT=8000
+      - JUSTNOTES_RELOAD=false
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  data:
+    driver: local

@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  justnotes-dev:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - JUSTNOTES_DATABASE_URL=sqlite:///app/data/db.sqlite
+      - JUSTNOTES_SECRET_KEY=dev-secret-key-change-in-production
+      - JUSTNOTES_ALGORITHM=HS256
+      - JUSTNOTES_ACCESS_TOKEN_EXPIRE_MINUTES=30
+      - JUSTNOTES_APP_NAME=JustNotes
+      - JUSTNOTES_APP_VERSION=0.0.1
+      - JUSTNOTES_APP_DESCRIPTION=JustNotes is a simple note-taking app
+      - JUSTNOTES_ENVIRONMENT=development
+      - JUSTNOTES_DEBUG=true
+      - JUSTNOTES_HOST=0.0.0.0
+      - JUSTNOTES_PORT=8000
+      - JUSTNOTES_RELOAD=true
+    volumes:
+      - ./src:/app/src
+      - ./data:/app/data
+    restart: unless-stopped
+    command: ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+
+volumes:
+  data:
+    driver: local

@@ -116,6 +116,97 @@ The codebase follows FastAPI best practices with:
 - Comprehensive documentation and type hints
 - Clean architecture with modular components
 
+## Docker Support
+
+JustNotes includes full Docker support for easy deployment and development.
+
+### Quick Start with Docker
+
+1. **Clone and setup:**
+```bash
+git clone https://github.com/DatMayo/JustNotes.git
+cd JustNotes
+cp .env.example .env
+# Edit .env with your settings
+```
+
+2. **Production deployment:**
+```bash
+docker-compose up -d
+```
+
+3. **Development with hot reload:**
+```bash
+docker-compose -f .docker/docker-compose.dev.yml up
+```
+
+### Docker Configuration
+
+- **Dockerfile**: Multi-stage build with Python 3.11 slim
+- **docker-compose.yml**: Production-ready with health checks
+- **.docker/**: Separate development and production configurations
+- **.dockerignore**: Optimized build context
+
+### Environment Variables
+
+All configuration is handled through environment variables with `JUSTNOTES_` prefix:
+
+```bash
+# Database
+JUSTNOTES_DATABASE_URL=sqlite:///app/data/db.sqlite
+
+# JWT Security
+JUSTNOTES_SECRET_KEY=your-secret-key-change-in-production
+JUSTNOTES_ALGORITHM=HS256
+JUSTNOTES_ACCESS_TOKEN_EXPIRE_MINUTES=30
+
+# Application
+JUSTNOTES_APP_NAME=JustNotes
+JUSTNOTES_APP_VERSION=0.0.1
+JUSTNOTES_APP_DESCRIPTION=JustNotes is a simple note-taking app
+
+# Environment
+JUSTNOTES_ENVIRONMENT=production
+JUSTNOTES_DEBUG=false
+JUSTNOTES_HOST=0.0.0.0
+JUSTNOTES_PORT=8000
+JUSTNOTES_RELOAD=false
+```
+
+### Docker Commands
+
+```bash
+# Build image
+docker build -t justnotes .
+
+# Run container
+docker run -p 8000:8000 -v $(pwd)/data:/app/data justnotes
+
+# Development with reload
+docker-compose -f .docker/docker-compose.dev.yml up --build
+
+# Production deployment
+docker-compose -f .docker/docker-compose.prod.yml up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop containers
+docker-compose down
+```
+
+### Data Persistence
+
+- SQLite database stored in `./data/` directory
+- Automatic volume mounting for data persistence
+- Database survives container restarts
+
+### Health Checks
+
+- Built-in health check endpoint at `/health`
+- Automatic container restart on failure
+- Monitoring ready for production deployment
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
