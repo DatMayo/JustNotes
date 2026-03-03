@@ -4,7 +4,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - JUSTNOTES_DATABASE_URL=sqlite:///app/data/db.sqlite
+      - JUSTNOTES_DATABASE_URL=sqlite:///app/data/justnotes.db
       - JUSTNOTES_SECRET_KEY=dev-secret-key-change-in-production
       - JUSTNOTES_ALGORITHM=HS256
       - JUSTNOTES_ACCESS_TOKEN_EXPIRE_MINUTES=30

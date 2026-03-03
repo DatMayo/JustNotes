@@ -24,13 +24,19 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY src/ ./src/
 COPY .env.example .env
 
-# Create data directory for SQLite database
-RUN mkdir -p /app/data
+# Create data directory for SQLite database with proper permissions
+RUN mkdir -p /app/data && \
+    chmod 755 /app/data
 
 # Create non-root user for security
 RUN useradd --create-home --shell /bin/bash app \
     && chown -R app:app /app
+
+# Switch to non-root user
 USER app
+
+# Ensure data directory is writable by app user
+RUN chmod 755 /app/data
 
 # Expose port
 EXPOSE 8000
