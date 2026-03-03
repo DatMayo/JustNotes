@@ -24,13 +24,25 @@ class NoteCRUD:
     
     def get_all_notes(self):
         """
-        Retrieve all notes from the database.
+        Retrieve all notes from the database (admin function).
         
         Returns:
             list[Note]: List of all notes in the database
         """
         # Execute a SQL query to select all notes from the database
         return self.session.exec(select(Note)).all()
+    
+    def get_user_notes(self, user_id: int):
+        """
+        Retrieve all notes created by a specific user.
+        
+        Args:
+            user_id: ID of the user whose notes to retrieve
+            
+        Returns:
+            list[Note]: List of notes created by the specified user
+        """
+        return self.session.exec(select(Note).where(Note.createdBy == user_id)).all()
     
     def get_public_notes(self):
         """

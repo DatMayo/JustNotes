@@ -25,16 +25,37 @@ def get_note_crud(session: Session = Depends(get_db_session)):
 @router.get("/notes", tags=["Notes"], response_model=list[Note])
 def get_notes(current_user = Depends(get_current_user), crud: NoteCRUD = Depends(get_note_crud)):
     """
-    Get all notes (requires authentication).
+    Get all notes for the current authenticated user.
     
     Args:
         current_user: Authenticated user from JWT token
         crud: NoteCRUD instance for database operations
         
     Returns:
-        list[Note]: List of all notes in the database
+        list[Note]: List of notes created by the current user
+        
+    Note:
+        Only returns notes that belong to the authenticated user
     """
-    return crud.get_all_notes()
+    return crud.get_user_notes(current_user.id)
+
+
+@router.get("/notes/my", tags=["Notes"], response_model=list[Note])
+def get_my_notes(current_user = Depends(get_current_user), crud: NoteCRUD = Depends(get_note_crud)):
+    """
+    Get all notes for the current user (both private and public).
+    
+    Args:
+        current_user: Authenticated user from JWT token
+        crud: NoteCRUD instance for database operations
+        
+    Returns:
+        list[Note]: List of all notes created by the current user
+        
+    Note:
+        Returns both private and public notes created by the user
+    """
+    return crud.get_user_notes(current_user.id)
 
 
 @router.post("/notes/create", tags=["Notes"], response_model=NoteResponse, status_code=201)
