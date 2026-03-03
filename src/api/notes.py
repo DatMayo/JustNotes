@@ -1,5 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session
+
+from ..models.user import UserResponse
 from ..database.connection import get_db_session
 from ..database.crud import NoteCRUD
 from ..models.note import Note, NoteBase, NoteResponse
@@ -91,7 +93,7 @@ def get_public_notes(crud: NoteCRUD = Depends(get_note_crud)):
     return crud.get_public_notes()
 
 
-@router.get("/notes/{id}", tags=["Notes"], response_model=dict)
+@router.get("/notes/{id}", tags=["Notes"], response_model=NoteResponse)
 def get_note(id: int, current_user = Depends(get_current_user), crud: NoteCRUD = Depends(get_note_crud)):
     """
     Get a specific note by ID (requires authentication).
@@ -108,11 +110,27 @@ def get_note(id: int, current_user = Depends(get_current_user), crud: NoteCRUD =
         HTTPException: 403 if user doesn't own the note and it's not public
         HTTPException: 404 if note is not found (from crud.get_note_by_id)
     """
-    note = crud.get_note_by_id(id)
+    note, user = crud.get_note_by_id(id)
+    owner: UserResponse = UserResponse(
+        id=user.id,
+        username=user.username,
+        createdAt=user.createdAt,
+        updatedAt=user.updatedAt
+    )
     # Check if user owns the note or it's public
-    if note["owner_id"] != current_user.id and not note["isPublic"]:
+    if note.owner_id != current_user.id and not note.isPublic:
         raise HTTPException(status_code=403, detail="Not authorized to access this note")
-    return note
+        
+    response = NoteResponse(
+        id=note.id,
+        title=note.title,
+        text=note.text,
+        isPublic=note.isPublic,
+        createdAt=note.createdAt,
+        updatedAt=note.updatedAt,
+        owner=owner
+        )
+    return response
 
 
 @router.put("/notes/{id}", tags=["Notes"], response_model=dict)

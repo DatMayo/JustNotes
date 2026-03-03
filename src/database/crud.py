@@ -1,3 +1,4 @@
+from sqlalchemy.orm import session
 from sqlmodel import Session, select
 from fastapi import HTTPException
 from ..models.note import Note
@@ -122,10 +123,18 @@ class NoteCRUD:
             HTTPException: 404 if note is not found
         """
         # Execute a SQL query to select a note by ID
+        statement = select(Note, User).join(User).where(Note.id == note_id)
+        results = self.session.exec(statement)
+        note = results.one()
+
+        return note
+        '''
         note = self.session.exec(select(Note).where(Note.id == note_id)).one_or_none()
         if note is None:
             # Raise an exception if the note is not found
             raise HTTPException(status_code=404, detail="Note not found")
+
+        print(note)
         
         # Convert to dictionary with owner information
         note_dict = {
@@ -150,6 +159,7 @@ class NoteCRUD:
                 }
         
         return note_dict
+        '''
     
     def create_note(self, note_data, user_id: int):
         """
@@ -233,17 +243,19 @@ class NoteCRUD:
         # Retrieve the note by ID
         note = self.get_note_by_id(note_id)
         
+        print(note)
         # Check if user owns the note
-        if note.owner_id != user_id:
+        if note['owner_id'] != user_id:
             raise HTTPException(status_code=403, detail="Not authorized to modify this note")
         
         # Update the note's data
-        note.title = note_data.title
-        note.text = note_data.text
-        note.isPublic = note_data.isPublic
+        note['title'] = note_data.title
+        note['text'] = note_data.text
+        note['isPublic'] = note_data.isPublic
         # owner_id remains unchanged to prevent ownership transfer
         
         self.session.commit()
+        '''
         self.session.refresh(note)
         
         # Convert to dictionary with owner information
@@ -266,8 +278,8 @@ class NoteCRUD:
                 "createdAt": user.createdAt,
                 "updatedAt": user.updatedAt
             }
-        
-        return note_dict
+        '''
+        return {}
 
 
 class UserCRUD:

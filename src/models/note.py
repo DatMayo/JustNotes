@@ -3,6 +3,8 @@ from sqlmodel import Field, SQLModel, Relationship
 import time
 from typing import Optional, TYPE_CHECKING
 
+from ..models.user import UserResponse
+
 if TYPE_CHECKING:
     from .user import User
 
@@ -71,4 +73,4 @@ class NoteResponse(NoteBase):
     id: int
     createdAt: int
     updatedAt: int
-    owner: Optional[dict] = None
+    owner: Optional[UserResponse] = None
