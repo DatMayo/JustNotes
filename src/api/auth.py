@@ -4,7 +4,7 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlmodel import Session
 from pydantic import BaseModel
 from ..database.connection import get_db_session
-from ..database.crud import UserCRUD
+from ..database import UserCRUD
 from ..utils.auth import verify_password, hash_password
 from ..utils.jwt import create_access_token
 from ..config import settings
