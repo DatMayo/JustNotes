@@ -3,7 +3,7 @@ from sqlmodel import Session
 from pydantic import BaseModel
 
 from ..database.connection import get_db_session
-from ..database.crud import TagCRUD, KeywordCRUD, NoteCRUD
+from ..database import TagCRUD, KeywordCRUD, NoteCRUD
 from ..api.auth import get_current_user
 
 router = APIRouter()
