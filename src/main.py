@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .database import create_db_and_tables
-from .api import notes_router, users_router, health_router, auth_router
+from .api import notes_router, users_router, health_router, auth_router, tags_router
 from .config import settings
 
 # Create FastAPI application instance with configuration
@@ -40,6 +40,7 @@ create_db_and_tables()
 app.include_router(auth_router)
 app.include_router(notes_router)
 app.include_router(users_router)
+app.include_router(tags_router)
 app.include_router(health_router)
 
 # Run the application when this file is executed directly
