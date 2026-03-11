@@ -15,12 +15,12 @@ app = FastAPI(
     contact={
         "name": "JustNotes",
         "url": "https://github.com/DatMayo/JustNotes/",
-        "email": "mario.franze@gmail.com"
+        "email": "mario.franze@gmail.com",
     },
     license_info={
         "name": "MIT License",
-        "url": "https://github.com/DatMayo/JustNotes/blob/main/LICENSE"
-    }
+        "url": "https://github.com/DatMayo/JustNotes/blob/main/LICENSE",
+    },
 )
 
 # Configure CORS middleware
@@ -45,4 +45,5 @@ app.include_router(health_router)
 # Run the application when this file is executed directly
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=8000)
