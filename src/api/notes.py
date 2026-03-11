@@ -5,7 +5,7 @@ import requests
 
 from ..models.user import UserResponse
 from ..database.connection import get_db_session
-from ..database.crud import NoteCRUD, TagCRUD, KeywordCRUD
+from ..database import NoteCRUD, TagCRUD, KeywordCRUD
 from ..models.note import NoteBase, NoteResponse
 from ..api.auth import get_current_user
 
