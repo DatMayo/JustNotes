@@ -80,7 +80,7 @@ class NoteCRUD:
         Returns:
             list[dict]: List of public notes with owner information as dictionaries
         """
-        notes = self.session.exec(select(Note).where(Note.isPublic == True)).all()
+        notes = self.session.exec(select(Note).where(Note.isPublic)).all()
 
         # Convert to dictionaries with owner information
         result = []

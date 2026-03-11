@@ -6,7 +6,7 @@ import requests
 from ..models.user import UserResponse
 from ..database.connection import get_db_session
 from ..database.crud import NoteCRUD
-from ..models.note import Note, NoteBase, NoteResponse
+from ..models.note import NoteBase, NoteResponse
 from ..api.auth import get_current_user
 
 # Router for note-related endpoints

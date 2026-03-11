@@ -1,7 +1,10 @@
 from pydantic import BaseModel
 from sqlmodel import Field, SQLModel, Relationship
 import time
-from typing import List
+from typing import List, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .note import Note
 
 
 def get_current_time() -> int:

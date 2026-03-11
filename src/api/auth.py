@@ -72,7 +72,6 @@ def get_current_user(
         HTTPException: 401 if token is invalid or user not found
     """
     from ..utils.jwt import verify_token
-    from ..models.user import User
 
     payload = verify_token(token)
     if payload is None:
