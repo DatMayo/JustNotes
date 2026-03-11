@@ -110,13 +110,34 @@ def _call_llm_api(model: str, prompt: str) -> dict:
 
     Returns:
         dict: JSON response from the LLM API
+
+    Raises:
+        HTTPException: 503 if LLM service is unavailable
+        HTTPException: 500 if LLM API returns an error
     """
-    response = requests.post(
-        "http://localhost:1234/api/v1/chat",
-        headers={"Content-Type": "application/json"},
-        json={"model": model, "input": prompt},
-    )
-    return response.json()
+    try:
+        response = requests.post(
+            "http://localhost:1234/api/v1/chat",
+            headers={"Content-Type": "application/json"},
+            json={"model": model, "input": prompt},
+        )
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.ConnectionError:
+        raise HTTPException(
+            status_code=503,
+            detail="LLM service is not available. Please ensure the LLM server is running on localhost:1234",
+        )
+    except requests.exceptions.Timeout:
+        raise HTTPException(
+            status_code=504,
+            detail="LLM service request timed out. Please try again later",
+        )
+    except requests.exceptions.RequestException as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error communicating with LLM service: {str(e)}",
+        )
 
 
 @router.get("/notes/{id}/summarize", tags=["Notes"])
@@ -133,9 +154,9 @@ Summarize the following article accurately and concisely, using the same languag
 Focus on key ideas, relevant facts, and overall meaning — avoid unnecessary details or repetition.
 Title: {note.title}
 Article: {note.text}
-Return only the summary text without commentary or formatting instructions."""
+Return only the summary text without commentary or formatting instructions in the language of the article!"""
 
-    return _call_llm_api("andycurrent/llama-3-8b-lexi-uncensored@q4_k_m", system_query)
+    return _call_llm_api("google/gemma-3n-e4b", system_query)
 
 
 @router.get("/notes/{id}/extend", tags=["Notes"])
@@ -153,9 +174,255 @@ Keep the original tone, style, and context consistent.
 Add depth by expanding on key ideas, providing additional insights, examples, or relevant background information — but do not repeat what's already written.
 Title: {note.title}
 Article: {note.text}
-Return only the extended version of the article."""
+Return only the extended version of the article in the language of the article!"""
 
-    return _call_llm_api("andycurrent/llama-3-8b-lexi-uncensored@q4_k_m", system_query)
+    return _call_llm_api("google/gemma-3n-e4b", system_query)
+
+
+@router.get("/notes/{id}/translate/{target_language}", tags=["Notes"])
+def get_notes_translate(
+    id: int,
+    target_language: str,
+    current_user=Depends(get_current_user),
+    crud: NoteCRUD = Depends(get_note_crud),
+):
+    """
+    Translate a note to a target language using AI.
+
+    Args:
+        id: Note ID from URL path
+        target_language: Target language for translation (e.g., 'English', 'German', 'Spanish')
+        current_user: Authenticated user from JWT token
+        crud: NoteCRUD instance for database operations
+
+    Returns:
+        dict: JSON response from LLM API with translated text
+
+    Raises:
+        HTTPException: 403 if user doesn't have access to the note
+        HTTPException: 404 if note is not found
+        HTTPException: 503 if LLM service is unavailable
+    """
+    note, user = crud.get_note_by_id(id)
+    _check_note_access(note, current_user)
+
+    system_query = f"""You are a professional translation assistant for a notes app.
+Translate the following article accurately and naturally into {target_language}.
+Preserve the original tone, style, and meaning. Maintain formatting if present.
+Only translate the content, do not add commentary or explanations.
+Title: {note.title}
+Article: {note.text}
+Return only the translated text in {target_language}!"""
+
+    return _call_llm_api("google/gemma-3n-e4b", system_query)
+
+
+@router.get("/notes/{id}/auto-tag", tags=["Notes"])
+def get_notes_auto_tag(
+    id: int,
+    current_user=Depends(get_current_user),
+    crud: NoteCRUD = Depends(get_note_crud),
+):
+    """
+    Automatically generate categories and tags for a note using AI.
+
+    Args:
+        id: Note ID from URL path
+        current_user: Authenticated user from JWT token
+        crud: NoteCRUD instance for database operations
+
+    Returns:
+        dict: JSON response with suggested categories and tags
+
+    Raises:
+        HTTPException: 403 if user doesn't have access to the note
+        HTTPException: 404 if note is not found
+        HTTPException: 503 if LLM service is unavailable
+    """
+    note, user = crud.get_note_by_id(id)
+    _check_note_access(note, current_user)
+
+    system_query = f"""You are an intelligent categorization assistant for a notes app.
+Analyze the following note and suggest:
+1. A primary category (e.g., Work, Personal, Ideas, Learning, Health, Finance, Travel, etc.)
+2. 3-5 relevant tags/keywords that describe the content
+
+Title: {note.title}
+Content: {note.text}
+
+Return your response in this exact JSON format:
+{{
+  "category": "CategoryName",
+  "tags": ["tag1", "tag2", "tag3"]
+}}
+
+Only return the JSON, no additional text or explanation!"""
+
+    return _call_llm_api("google/gemma-3n-e4b", system_query)
+
+
+@router.get("/notes/{id}/keywords", tags=["Notes"])
+def get_notes_keywords(
+    id: int,
+    current_user=Depends(get_current_user),
+    crud: NoteCRUD = Depends(get_note_crud),
+):
+    """
+    Extract key terms and concepts from a note using AI.
+
+    Args:
+        id: Note ID from URL path
+        current_user: Authenticated user from JWT token
+        crud: NoteCRUD instance for database operations
+
+    Returns:
+        dict: JSON response with extracted keywords and key phrases
+
+    Raises:
+        HTTPException: 403 if user doesn't have access to the note
+        HTTPException: 404 if note is not found
+        HTTPException: 503 if LLM service is unavailable
+    """
+    note, user = crud.get_note_by_id(id)
+    _check_note_access(note, current_user)
+
+    system_query = f"""You are an intelligent keyword extraction assistant for a notes app.
+Analyze the following note and extract:
+1. The 5-10 most important keywords (single words or short phrases)
+2. The 3 main topics or themes
+
+Title: {note.title}
+Content: {note.text}
+
+Return your response in this exact JSON format:
+{{
+  "keywords": ["keyword1", "keyword2", "keyword3"],
+  "main_topics": ["topic1", "topic2", "topic3"]
+}}
+
+Only return the JSON, no additional text or explanation!"""
+
+    return _call_llm_api("google/gemma-3n-e4b", system_query)
+
+
+@router.get("/notes/{id}/sentiment", tags=["Notes"])
+def get_notes_sentiment(
+    id: int,
+    current_user=Depends(get_current_user),
+    crud: NoteCRUD = Depends(get_note_crud),
+):
+    """
+    Analyze the emotional sentiment and tone of a note using AI.
+
+    Args:
+        id: Note ID from URL path
+        current_user: Authenticated user from JWT token
+        crud: NoteCRUD instance for database operations
+
+    Returns:
+        dict: JSON response with sentiment analysis (positive/negative/neutral) and confidence
+
+    Raises:
+        HTTPException: 403 if user doesn't have access to the note
+        HTTPException: 404 if note is not found
+        HTTPException: 503 if LLM service is unavailable
+    """
+    note, user = crud.get_note_by_id(id)
+    _check_note_access(note, current_user)
+
+    system_query = f"""You are an intelligent sentiment analysis assistant for a notes app.
+Analyze the emotional tone and sentiment of the following note.
+
+Title: {note.title}
+Content: {note.text}
+
+Provide:
+1. Overall sentiment: positive, negative, or neutral
+2. Confidence score: 0.0 to 1.0 (how confident you are in this assessment)
+3. Dominant emotions: list 1-3 emotions present (e.g., joy, sadness, anger, fear, excitement, calm, etc.)
+4. Brief explanation (1 sentence)
+
+Return your response in this exact JSON format:
+{{
+  "sentiment": "positive|negative|neutral",
+  "confidence": 0.85,
+  "emotions": ["emotion1", "emotion2"],
+  "explanation": "Brief explanation here"
+}}
+
+Only return the JSON, no additional text!"""
+
+    return _call_llm_api("google/gemma-3n-e4b", system_query)
+
+
+@router.get("/notes/{id}/related", tags=["Notes"])
+def get_notes_related(
+    id: int,
+    current_user=Depends(get_current_user),
+    crud: NoteCRUD = Depends(get_note_crud),
+):
+    """
+    Find related notes based on content similarity using AI.
+
+    Args:
+        id: Note ID from URL path
+        current_user: Authenticated user from JWT token
+        crud: NoteCRUD instance for database operations
+
+    Returns:
+        dict: JSON response with related note IDs and similarity scores
+
+    Raises:
+        HTTPException: 403 if user doesn't have access to the note
+        HTTPException: 404 if note is not found
+        HTTPException: 503 if LLM service is unavailable
+    """
+    note, user = crud.get_note_by_id(id)
+    _check_note_access(note, current_user)
+
+    user_notes = crud.get_user_notes(current_user.id)
+
+    if len(user_notes) <= 1:
+        return {
+            "related_notes": [],
+            "message": "Not enough notes to find relationships",
+        }
+
+    other_notes = [n for n in user_notes if n["id"] != id]
+    notes_context = "\n\n".join(
+        [
+            f"ID: {n['id']}\nTitle: {n['title']}\nContent: {n['text'][:200]}..."
+            for n in other_notes[:10]
+        ]
+    )
+
+    system_query = f"""You are an intelligent note relationship analyzer.
+Analyze the following note and find which of the user's other notes are most related to it.
+
+CURRENT NOTE:
+Title: {note.title}
+Content: {note.text}
+
+OTHER NOTES:
+{notes_context}
+
+Identify the 3 most related notes based on:
+- Topic similarity
+- Shared concepts or themes
+- Complementary information
+
+Return your response in this exact JSON format:
+{{
+  "related_notes": [
+    {{"id": 123, "similarity_score": 0.85, "reason": "Brief reason"}},
+    {{"id": 456, "similarity_score": 0.72, "reason": "Brief reason"}}
+  ]
+}}
+
+Similarity score should be between 0.0 and 1.0.
+Only return the JSON, no additional text!"""
+
+    return _call_llm_api("google/gemma-3n-e4b", system_query)
 
 
 @router.get("/notes/{id}", tags=["Notes"], response_model=NoteResponse)
