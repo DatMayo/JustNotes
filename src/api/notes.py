@@ -228,3 +228,30 @@ def update_note(
         Ownership cannot be transferred through this endpoint
     """
     return crud.update_note(id, item, current_user.id)
+
+
+@router.delete("/notes/{id}", tags=["Notes"], response_model=dict)
+def delete_note(
+    id: int,
+    current_user=Depends(get_current_user),
+    crud: NoteCRUD = Depends(get_note_crud),
+):
+    """
+    Delete a specific note by ID (requires authentication and ownership).
+
+    Args:
+        id: Note ID from URL path
+        current_user: Authenticated user from JWT token
+        crud: NoteCRUD instance for database operations
+
+    Returns:
+        dict: Success message
+
+    Raises:
+        HTTPException: 403 if user doesn't own the note
+        HTTPException: 404 if note is not found (from crud.get_note_by_id)
+
+    Note:
+        Only the owner can delete their notes
+    """
+    return crud.delete_note(id, current_user.id)
