@@ -120,49 +120,20 @@ class NoteCRUD:
             note_id: ID of the note to retrieve
 
         Returns:
-            dict: Note with specified ID and owner information
+            tuple: (Note, User) objects
 
         Raises:
             HTTPException: 404 if note is not found
         """
-        # Execute a SQL query to select a note by ID
+        # Execute a SQL query to select a note by ID with user join
         statement = select(Note, User).join(User).where(Note.id == note_id)
-        results = self.session.exec(statement)
-        note = results.one()
+        result = self.session.exec(statement).one_or_none()
 
-        return note
-        """
-        note = self.session.exec(select(Note).where(Note.id == note_id)).one_or_none()
-        if note is None:
-            # Raise an exception if the note is not found
+        if result is None:
             raise HTTPException(status_code=404, detail="Note not found")
 
-        print(note)
-        
-        # Convert to dictionary with owner information
-        note_dict = {
-            "id": note.id,
-            "title": note.title,
-            "text": note.text,
-            "isPublic": note.isPublic,
-            "createdAt": note.createdAt,
-            "updatedAt": note.updatedAt,
-            "owner_id": note.owner_id
-        }
-        
-        # Add owner information
-        if note.owner_id:
-            user = self.session.exec(select(User).where(User.id == note.owner_id)).one_or_none()
-            if user:
-                note_dict["owner"] = {
-                    "id": user.id,
-                    "username": user.username,
-                    "createdAt": user.createdAt,
-                    "updatedAt": user.updatedAt
-                }
-        
-        return note_dict
-        """
+        note, user = result
+        return note, user
 
     def create_note(self, note_data, user_id: int):
         """
@@ -241,32 +212,32 @@ class NoteCRUD:
             user_id: ID of the user attempting to update
 
         Returns:
-            Note: Updated note with new data
+            dict: Updated note with owner information
 
         Raises:
             HTTPException: 404 if note is not found
             HTTPException: 403 if user doesn't own the note
         """
         # Retrieve the note by ID
-        note = self.get_note_by_id(note_id)
+        note, user = self.get_note_by_id(note_id)
 
-        print(note)
         # Check if user owns the note
-        if note["owner_id"] != user_id:
+        if note.owner_id != user_id:
             raise HTTPException(
                 status_code=403, detail="Not authorized to modify this note"
             )
 
         # Update the note's data
-        note["title"] = note_data.title
-        note["text"] = note_data.text
-        note["isPublic"] = note_data.isPublic
+        note.title = note_data.title
+        note.text = note_data.text
+        note.isPublic = note_data.isPublic
+        note.updatedAt = int(__import__("time").time())
         # owner_id remains unchanged to prevent ownership transfer
 
+        self.session.add(note)
         self.session.commit()
-        """
         self.session.refresh(note)
-        
+
         # Convert to dictionary with owner information
         note_dict = {
             "id": note.id,
@@ -275,20 +246,48 @@ class NoteCRUD:
             "isPublic": note.isPublic,
             "createdAt": note.createdAt,
             "updatedAt": note.updatedAt,
-            "owner_id": note.owner_id
+            "owner_id": note.owner_id,
         }
-        
+
         # Add owner information
-        user = self.session.exec(select(User).where(User.id == note.owner_id)).one_or_none()
-        if user:
-            note_dict["owner"] = {
-                "id": user.id,
-                "username": user.username,
-                "createdAt": user.createdAt,
-                "updatedAt": user.updatedAt
-            }
+        note_dict["owner"] = {
+            "id": user.id,
+            "username": user.username,
+            "createdAt": user.createdAt,
+            "updatedAt": user.updatedAt,
+        }
+
+        return note_dict
+
+    def delete_note(self, note_id: int, user_id: int):
         """
-        return {}
+        Delete a note from the database.
+
+        Args:
+            note_id: ID of the note to delete
+            user_id: ID of the user attempting to delete
+
+        Returns:
+            dict: Success message
+
+        Raises:
+            HTTPException: 404 if note is not found
+            HTTPException: 403 if user doesn't own the note
+        """
+        # Retrieve the note by ID
+        note, user = self.get_note_by_id(note_id)
+
+        # Check if user owns the note
+        if note.owner_id != user_id:
+            raise HTTPException(
+                status_code=403, detail="Not authorized to delete this note"
+            )
+
+        # Delete the note
+        self.session.delete(note)
+        self.session.commit()
+
+        return {"message": "Note deleted successfully"}
 
 
 class UserCRUD:
