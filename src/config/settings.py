@@ -1,14 +1,14 @@
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
     """
     Application configuration settings.
-    
+
     Loads configuration from environment variables and .env file.
     Uses JUSTNOTES_ prefix for environment variables.
     Provides default values for all settings.
-    
+
     Attributes:
         database_url: Database connection URL
         app_name: Name of the application
@@ -23,42 +23,36 @@ class Settings(BaseSettings):
         port: Server port for Docker
         reload: Enable auto-reload for development
     """
+
     # Database Configuration
     database_url: str = "sqlite:///db.sqlite"
-    
+
     # Application Configuration
     app_name: str = "JustNotes"
     app_version: str = "0.0.1"
     app_description: str = "JustNotes is a simple note-taking app"
-    
+
     # JWT Configuration
     secret_key: str = "your-secret-key-change-in-production"
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
-    
+
     # Environment Configuration
     environment: str = "development"
     debug: bool = True
-    
+
     # Server Configuration (for Docker)
     host: str = "0.0.0.0"
     port: int = 8000
     reload: bool = False
-    
-    class Config:
-        """
-        Pydantic configuration for settings.
-        
-        Attributes:
-            env_file: Path to environment file for loading variables
-            env_file_encoding: File encoding for environment file
-            case_sensitive: Whether environment variables are case sensitive
-            env_prefix: Prefix for environment variables
-        """
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = False
-        env_prefix = "JUSTNOTES_"
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        env_prefix="JUSTNOTES_",
+        extra="ignore",
+    )
 
 
 # Global settings instance
