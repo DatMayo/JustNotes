@@ -2,7 +2,6 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session
 
 import requests
-import json
 
 from ..models.user import UserResponse
 from ..database.connection import get_db_session
@@ -249,19 +248,17 @@ def get_notes_auto_tag(
     id: int,
     current_user=Depends(get_current_user),
     crud: NoteCRUD = Depends(get_note_crud),
-    tag_crud: TagCRUD = Depends(get_tag_crud),
 ):
     """
-    Automatically generate categories and tags for a note using AI and save them to database.
+    Automatically generate categories and tags for a note using AI.
 
     Args:
         id: Note ID from URL path
         current_user: Authenticated user from JWT token
         crud: NoteCRUD instance for database operations
-        tag_crud: TagCRUD instance for database operations
 
     Returns:
-        dict: JSON response with suggested categories and tags, plus saved tag IDs
+        dict: JSON response with suggested categories and tags
 
     Raises:
         HTTPException: 403 if user doesn't have access to the note
@@ -287,29 +284,7 @@ Return your response in this exact JSON format:
 
 Only return the JSON, no additional text or explanation!"""
 
-    llm_response = _call_llm_api("google/gemma-3n-e4b", system_query)
-
-    try:
-        ai_data = json.loads(llm_response.get("response", "{}"))
-        category = ai_data.get("category")
-        tags = ai_data.get("tags", [])
-
-        saved_tags = []
-        for tag_name in tags:
-            tag = tag_crud.get_or_create_tag(tag_name, category, current_user.id)
-            tag_crud.add_tag_to_note(id, tag.id)
-            saved_tags.append(
-                {"id": tag.id, "name": tag.name, "category": tag.category}
-            )
-
-        return {
-            "category": category,
-            "tags": tags,
-            "saved_tags": saved_tags,
-            "message": f"Successfully created and linked {len(saved_tags)} tags to note",
-        }
-    except (json.JSONDecodeError, KeyError) as e:
-        return llm_response
+    return _call_llm_api("google/gemma-3n-e4b", system_query)
 
 
 @router.get("/notes/{id}/keywords", tags=["Notes"])
@@ -317,19 +292,17 @@ def get_notes_keywords(
     id: int,
     current_user=Depends(get_current_user),
     crud: NoteCRUD = Depends(get_note_crud),
-    keyword_crud: KeywordCRUD = Depends(get_keyword_crud),
 ):
     """
-    Extract key terms and concepts from a note using AI and save them to database.
+    Extract key terms and concepts from a note using AI.
 
     Args:
         id: Note ID from URL path
         current_user: Authenticated user from JWT token
         crud: NoteCRUD instance for database operations
-        keyword_crud: KeywordCRUD instance for database operations
 
     Returns:
-        dict: JSON response with extracted keywords and key phrases, plus saved keyword IDs
+        dict: JSON response with extracted keywords and key phrases
 
     Raises:
         HTTPException: 403 if user doesn't have access to the note
@@ -355,42 +328,7 @@ Return your response in this exact JSON format:
 
 Only return the JSON, no additional text or explanation!"""
 
-    llm_response = _call_llm_api("google/gemma-3n-e4b", system_query)
-
-    try:
-        ai_data = json.loads(llm_response.get("response", "{}"))
-        keywords = ai_data.get("keywords", [])
-        main_topics = ai_data.get("main_topics", [])
-
-        saved_keywords = []
-        for kw_term in keywords:
-            keyword = keyword_crud.get_or_create_keyword(
-                kw_term, False, current_user.id
-            )
-            keyword_crud.add_keyword_to_note(id, keyword.id)
-            saved_keywords.append(
-                {"id": keyword.id, "term": keyword.term, "is_main_topic": False}
-            )
-
-        saved_topics = []
-        for topic_term in main_topics:
-            keyword = keyword_crud.get_or_create_keyword(
-                topic_term, True, current_user.id
-            )
-            keyword_crud.add_keyword_to_note(id, keyword.id)
-            saved_topics.append(
-                {"id": keyword.id, "term": keyword.term, "is_main_topic": True}
-            )
-
-        return {
-            "keywords": keywords,
-            "main_topics": main_topics,
-            "saved_keywords": saved_keywords,
-            "saved_topics": saved_topics,
-            "message": f"Successfully created and linked {len(saved_keywords)} keywords and {len(saved_topics)} topics to note",
-        }
-    except (json.JSONDecodeError, KeyError) as e:
-        return llm_response
+    return _call_llm_api("google/gemma-3n-e4b", system_query)
 
 
 @router.get("/notes/{id}/sentiment", tags=["Notes"])
