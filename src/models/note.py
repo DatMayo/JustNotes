@@ -7,6 +7,7 @@ from ..models.user import UserResponse
 
 if TYPE_CHECKING:
     from .user import User
+    from .tag import Tag, Keyword
 
 
 def get_current_time() -> int:
@@ -57,6 +58,16 @@ class Note(NoteBase, SQLModel, table=True):
 
     # Relationship to User model
     owner: Optional["User"] = Relationship(back_populates="notes")
+
+    # Relationships to Tags and Keywords (defined after Note class to avoid circular imports)
+    tags: list["Tag"] = Relationship(
+        back_populates="notes",
+        sa_relationship_kwargs={"secondary": "notetaglink"},
+    )
+    keywords: list["Keyword"] = Relationship(
+        back_populates="notes",
+        sa_relationship_kwargs={"secondary": "notekeywordlink"},
+    )
 
 
 class NoteResponse(NoteBase):
