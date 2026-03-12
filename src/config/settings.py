@@ -46,6 +46,13 @@ class Settings(BaseSettings):
     port: int = 8000
     reload: bool = False
 
+    # CORS Configuration
+    cors_origins: str = "*"
+
+    # LLM Service Configuration
+    llm_service_url: str = "http://localhost:1234/api/v1/chat"
+    llm_model: str = "google/gemma-3n-e4b"
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
