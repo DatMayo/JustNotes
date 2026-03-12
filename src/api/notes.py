@@ -8,6 +8,7 @@ from ..database.connection import get_db_session
 from ..database import NoteCRUD, TagCRUD, KeywordCRUD
 from ..models.note import NoteBase, NoteResponse
 from ..api.auth import get_current_user
+from ..config import settings
 
 # Router for note-related endpoints
 router = APIRouter()
@@ -143,7 +144,7 @@ def _call_llm_api(model: str, prompt: str) -> dict:
     """
     try:
         response = requests.post(
-            "http://localhost:1234/api/v1/chat",
+            settings.llm_service_url,
             headers={"Content-Type": "application/json"},
             json={"model": model, "input": prompt},
         )
@@ -152,7 +153,7 @@ def _call_llm_api(model: str, prompt: str) -> dict:
     except requests.exceptions.ConnectionError:
         raise HTTPException(
             status_code=503,
-            detail="LLM service is not available. Please ensure the LLM server is running on localhost:1234",
+            detail=f"LLM service is not available. Please ensure the LLM server is running at {settings.llm_service_url}",
         )
     except requests.exceptions.Timeout:
         raise HTTPException(
@@ -182,7 +183,7 @@ Title: {note.title}
 Article: {note.text}
 Return only the summary text without commentary or formatting instructions in the language of the article!"""
 
-    return _call_llm_api("google/gemma-3n-e4b", system_query)
+    return _call_llm_api(settings.llm_model, system_query)
 
 
 @router.get("/notes/{id}/extend", tags=["Notes"])
@@ -202,7 +203,7 @@ Title: {note.title}
 Article: {note.text}
 Return only the extended version of the article in the language of the article!"""
 
-    return _call_llm_api("google/gemma-3n-e4b", system_query)
+    return _call_llm_api(settings.llm_model, system_query)
 
 
 @router.get("/notes/{id}/translate/{target_language}", tags=["Notes"])
@@ -240,7 +241,7 @@ Title: {note.title}
 Article: {note.text}
 Return only the translated text in {target_language}!"""
 
-    return _call_llm_api("google/gemma-3n-e4b", system_query)
+    return _call_llm_api(settings.llm_model, system_query)
 
 
 @router.get("/notes/{id}/auto-tag", tags=["Notes"])
@@ -284,7 +285,7 @@ Return your response in this exact JSON format:
 
 Only return the JSON, no additional text or explanation!"""
 
-    return _call_llm_api("google/gemma-3n-e4b", system_query)
+    return _call_llm_api(settings.llm_model, system_query)
 
 
 @router.get("/notes/{id}/keywords", tags=["Notes"])
@@ -328,7 +329,7 @@ Return your response in this exact JSON format:
 
 Only return the JSON, no additional text or explanation!"""
 
-    return _call_llm_api("google/gemma-3n-e4b", system_query)
+    return _call_llm_api(settings.llm_model, system_query)
 
 
 @router.get("/notes/{id}/sentiment", tags=["Notes"])
@@ -378,7 +379,7 @@ Return your response in this exact JSON format:
 
 Only return the JSON, no additional text!"""
 
-    return _call_llm_api("google/gemma-3n-e4b", system_query)
+    return _call_llm_api(settings.llm_model, system_query)
 
 
 @router.get("/notes/{id}/related", tags=["Notes"])
@@ -448,7 +449,7 @@ Return your response in this exact JSON format:
 Similarity score should be between 0.0 and 1.0.
 Only return the JSON, no additional text and in the language of the written note!"""
 
-    return _call_llm_api("google/gemma-3n-e4b", system_query)
+    return _call_llm_api(settings.llm_model, system_query)
 
 
 @router.get("/notes/{id}", tags=["Notes"], response_model=NoteResponse)
