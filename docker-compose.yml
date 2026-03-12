@@ -16,6 +16,9 @@ services:
       - JUSTNOTES_HOST=0.0.0.0
       - JUSTNOTES_PORT=8000
       - JUSTNOTES_RELOAD=false
+      - JUSTNOTES_CORS_ORIGINS=${JUSTNOTES_CORS_ORIGINS:-*}
+      - JUSTNOTES_LLM_SERVICE_URL=${JUSTNOTES_LLM_SERVICE_URL:-http://localhost:1234/api/v1/chat}
+      - JUSTNOTES_LLM_MODEL=${JUSTNOTES_LLM_MODEL:-google/gemma-3n-e4b}
     volumes:
       - ./data:/app/data
     restart: unless-stopped
